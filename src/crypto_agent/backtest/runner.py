@@ -38,6 +38,8 @@ def variants() -> dict[str, BTParams]:
         "F_cho_hoi_0_7": variant(b, entry="pullback"),
         "G_chi_btc_eth": variant(b, majors_only=True),
         "H_bo_tin_hieu_dem": variant(b, skip_hours_utc=(20,)),
+        # Chẩn đoán (không phải ứng viên): bỏ hết phí, trượt giá để xem lợi thế trước chi phí
+        "Z_chan_doan_khong_phi": variant(b, taker=0.0, maker=0.0, slip_major=0.0, slip_alt=0.0),
     }
     sens = {
         "do_rong": [("green_breadth", 0.44, 0.66), ("red_breadth", 0.32, 0.48)],
@@ -186,6 +188,7 @@ def report(results: dict, uni: pd.DataFrame) -> str:
         lines += [f"Sự kiện: {e}" for e in o["su_kien"]]
         i = results["co_so"]["trong_mau"]
         lines += ["", f"Trong mẫu theo năm: {i['theo_nam']}", f"Trong mẫu lý do thoát: {i['ly_do']}"]
+        lines += [f"Trong mẫu R theo lý do: {i['r_theo_ly_do']}"]
         lines += [f"Trong mẫu sự kiện: {e}" for e in i["su_kien"]]
     return "\n".join(lines) + "\n"
 

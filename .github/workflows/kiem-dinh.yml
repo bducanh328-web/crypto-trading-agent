@@ -31,7 +31,9 @@ jobs:
       - name: Tóm tắt
         if: always()
         run: |
-          if [ -f ket_qua/tong_hop.md ]; then cat ket_qua/tong_hop.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f ket_qua/tong_hop.md ]; then cat ket_qua/tong_hop.md | tee -a "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f ket_qua/giao_dich_co_so_ngoai_mau.csv ]; then echo "=== GIAO DICH NGOAI MAU ==="; cat ket_qua/giao_dich_co_so_ngoai_mau.csv; fi
+          if [ -f ket_qua/den_lich_su.csv ]; then echo "=== DEN ==="; cat ket_qua/den_lich_su.csv; fi
           if [ -f data/hist/ro_thang.csv ]; then cp data/hist/ro_thang.csv ket_qua/ 2>/dev/null || true; fi
       - uses: actions/upload-artifact@v4
         if: always()

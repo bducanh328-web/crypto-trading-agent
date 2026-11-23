@@ -41,6 +41,10 @@ def summarize(trades: pd.DataFrame, equity: pd.Series, start: pd.Timestamp, end:
         out[f"{name}_n"] = int(len(sub))
         out[f"{name}_r"] = float(sub["r"].mean()) if len(sub) else np.nan
     out["ly_do"] = trades["reason"].value_counts().to_dict() if len(trades) else {}
+    out["r_theo_ly_do"] = trades.groupby("reason")["r"].mean().round(2).to_dict() if len(trades) else {}
+    if len(trades):
+        dist = (trades["entry"] - trades["stop0"]).abs() / trades["entry"]
+        out["stop_trung_vi"] = float(dist.median())
     return out
 
 
