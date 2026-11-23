@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       dac_ta:
-        description: "1: hợp đồng vĩnh cửu; 2: giao ngay"
+        description: "1: vĩnh cửu; 2: giao ngay BTC+vàng; 3: chỉ BTC, biến động 15%"
         default: "1"
 
 jobs:

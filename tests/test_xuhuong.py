@@ -134,3 +134,14 @@ def test_evaluate_spot_end_to_end():
     s = o["S1_giao_ngay"]
     assert s["funding"] == 0 and s["ty_trong_max_tong"] <= 1.0 + 1e-9 and len(s["dat"]) == 6
     assert "Tổng:" in report_spot(o)
+
+
+def test_evaluate_btc_end_to_end():
+    from crypto_agent.xuhuong.runner import evaluate_btc, report_btc
+
+    btc = _walk(3300, 5, 0.0015, 0.035, start="2017-08-17")
+    o = evaluate_btc({"btc": btc})
+    b = o["B1_btc_xu_huong"]
+    assert len(b["dat"]) == 6 and 0 <= b["ty_trong_tb"] <= 1.0001
+    assert 0.08 < b["bien_dong"] < 0.25  # quanh mục tiêu 15%
+    assert "Tổng:" in report_btc(o)

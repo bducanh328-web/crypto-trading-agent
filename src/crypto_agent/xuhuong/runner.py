@@ -179,6 +179,68 @@ def report_spot(o: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def evaluate_btc(data: dict, vol_target: float = 0.15) -> dict:
+    """Đặc tả 3: chỉ BTC giao ngay, long hoặc đứng ngoài, biến động mục tiêu 15%/năm, tỷ trọng ≤ 1."""
+    btc = data["btc"].loc[:END].astype(float)
+    cal = pd.date_range(btc.index.min(), END, freq="D")
+    zero = {"BTC": pd.Series(0.0, index=cal)}
+    tg = {m: target_weights(btc, ANN["BTC"], m, max_w=1.0, vol_target=vol_target) for m in ("long_flat", "always_long")}
+    start = tg["long_flat"].first_valid_index() + pd.Timedelta(days=1)
+    period = cal[cal >= start]
+    out: dict = {"giai_doan": [str(period[0].date()), str(period[-1].date())]}
+    for name, mode in (("B1_btc_xu_huong", "long_flat"), ("M4b_btc_luon_long", "always_long")):
+        res = simulate({"BTC": btc}, {"BTC": tg[mode].loc[start:]}, zero, period, fee=SPOT_FEE)
+        s = stats(res.equity)
+        s["so_giao_dich"], s["chi_phi"] = res.trades, res.costs
+        s["ty_trong_tb"] = float(res.weights["BTC"].mean())
+        s["ty_le_ngay_dung_ngoai"] = float((res.weights["BTC"] < 0.01).mean())
+        s["sharpe_truoc"] = _sharpe(res.equity.loc[:SPLIT])
+        s["sharpe_sau"] = _sharpe(res.equity.loc[SPLIT:])
+        out[name] = s
+    hold = btc.reindex(period).ffill()
+    out["M1_giu_BTC"] = stats((hold / hold.iloc[0]).dropna())
+    s, m4, m1 = out["B1_btc_xu_huong"], out["M4b_btc_luon_long"], out["M1_giu_BTC"]
+    s["dat"] = {
+        "1_sut_giam_<=40%": bool(-s["sut_giam"] <= 0.40),
+        "2_sharpe_>=0.6": bool(s["sharpe"] >= 0.6),
+        "3_calmar_>=M4b": bool(s["calmar"] >= m4["calmar"]),
+        "4_calmar_>=giu_BTC": bool(s["calmar"] >= m1["calmar"]),
+        "5_nam_lai_>=2/3": bool(s["nam_tron_lai"] >= 2 / 3),
+        "6_sharpe_truoc_sau_>0": bool(s["sharpe_truoc"] > 0 and s["sharpe_sau"] > 0),
+    }
+    s["DAT_TAT_CA"] = all(s["dat"].values())
+    return out
+
+
+def report_btc(o: dict) -> str:
+    def pct(x):
+        return "–" if x is None or not np.isfinite(x) else f"{100 * x:+.1f}%"
+
+    def num(x):
+        return "–" if x is None or not np.isfinite(x) else f"{x:.2f}"
+
+    lines = ["# Kết quả đặc tả 3: chỉ BTC giao ngay, biến động mục tiêu 15%/năm", "",
+             f"Giai đoạn: {o['giai_doan'][0]} → {o['giai_doan'][1]}.", "",
+             "| Chiến lược | CAGR | Biến động | Sharpe | Sụt giảm | Calmar | Năm lãi | Chạm −15% |",
+             "|---|---|---|---|---|---|---|---|"]  # fmt: skip
+    for k in ("B1_btc_xu_huong", "M4b_btc_luon_long", "M1_giu_BTC"):
+        s = o[k]
+        lines.append(
+            f"| {k} | {pct(s['cagr'])} | {pct(s['bien_dong'])} | {num(s['sharpe'])} | {pct(s['sut_giam'])} "
+            f"| {num(s['calmar'])} | {pct(s['nam_tron_lai'])} ({s['so_nam_tron']} năm) | {s['cham_15'] or 'không'} |"
+        )
+    for k in ("B1_btc_xu_huong", "M4b_btc_luon_long"):
+        s = o[k]
+        lines += ["", f"## {k}", f"Theo năm: { {y: round(v, 4) for y, v in s['theo_nam'].items()} }",
+                  f"Tỷ trọng TB: {s['ty_trong_tb']:.3f} · Ngày đứng ngoài: {s['ty_le_ngay_dung_ngoai']:.1%}",
+                  f"Giao dịch: {s['so_giao_dich']} · Chi phí: {s['chi_phi']:.4f}",
+                  f"Sharpe trước/sau 07/2022: {num(s['sharpe_truoc'])} / {num(s['sharpe_sau'])}"]  # fmt: skip
+        if "dat" in s:
+            lines += [f"- {c}: {'ĐẠT' if ok else 'KHÔNG ĐẠT'}" for c, ok in s["dat"].items()]
+            lines.append(f"**Tổng: {'ĐẠT' if s['DAT_TAT_CA'] else 'KHÔNG ĐẠT'}**")
+    return "\n".join(lines) + "\n"
+
+
 def report(o: dict) -> str:
     def pct(x):
         return "–" if x is None or not np.isfinite(x) else f"{100 * x:+.1f}%"
@@ -219,6 +281,10 @@ def report(o: dict) -> str:
 
 def main_args(args) -> int:
     data = load_all(Path(args.data_dir) / "xuhuong")
+    if getattr(args, "dac_ta", 1) == 3:
+        o = evaluate_btc(data)
+        print(report_btc(o))
+        return 0
     if getattr(args, "dac_ta", 1) == 2:
         o = evaluate_spot(data)
         out = Path(args.ket_qua)

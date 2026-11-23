@@ -32,14 +32,15 @@ def realized_vol(close: pd.Series, ann_days: int, n: int = VOL_DAYS) -> pd.Serie
     return np.log(close).diff().rolling(n).std() * np.sqrt(ann_days)
 
 
-def target_weights(close: pd.Series, ann_days: int, mode: str, max_w: float = MAX_W) -> pd.Series:
+def target_weights(close: pd.Series, ann_days: int, mode: str, max_w: float = MAX_W,
+                   vol_target: float = ASSET_VOL) -> pd.Series:  # fmt: skip
     """mode: long_short (V1) | long_flat (V2) | always_long (M4)."""
     s = signal(close)
     if mode == "long_flat":
         s = s.clip(lower=0)
     elif mode == "always_long":
         s = s.where(s.isna(), 1.0)
-    w = s * ASSET_VOL / realized_vol(close, ann_days)
+    w = s * vol_target / realized_vol(close, ann_days)
     return w.clip(-max_w, max_w)
 
 
