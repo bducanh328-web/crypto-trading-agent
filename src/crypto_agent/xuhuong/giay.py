@@ -154,8 +154,12 @@ def main_args(args) -> int:
     if args.telegram:
         from ..telegram import CHAT_ENV, TOKEN_ENV, send
 
-        if os.environ.get(TOKEN_ENV) and os.environ.get(CHAT_ENV):
-            send(text)
+        chat = os.environ.get(CHAT_ENV, "").strip()
+        if chat.startswith("-"):
+            # ID âm là kênh hoặc nhóm: bản tin B1 chỉ gửi tin nhắn riêng với bot
+            raise RuntimeError(f"{CHAT_ENV} đang là kênh/nhóm ({chat[:5]}…); cần ID chat riêng (số dương)")
+        if os.environ.get(TOKEN_ENV) and chat:
+            send(text, chat_id=chat)
         else:
             log.warning("Chưa đặt %s / %s: không gửi Telegram", TOKEN_ENV, CHAT_ENV)
     return 0
