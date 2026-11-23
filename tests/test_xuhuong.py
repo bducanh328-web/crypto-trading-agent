@@ -116,9 +116,8 @@ def test_bitunix_funding_pages_backwards():
 
         def funding_history(self, symbol, start_ms, end_ms=None):
             Api.calls += 1
-            s = full[
-                (full.index.astype("int64") // 10**6 >= start_ms) & (full.index.astype("int64") // 10**6 <= end_ms)
-            ]
+            ms = full.index.as_unit("ms").asi8
+            s = full[(ms >= start_ms) & (ms <= end_ms)]
             return s.iloc[-200:]
 
     got = bitunix_funding_events(api=Api())
