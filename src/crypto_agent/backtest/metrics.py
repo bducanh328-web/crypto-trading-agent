@@ -19,7 +19,8 @@ def summarize(trades: pd.DataFrame, equity: pd.Series, start: pd.Timestamp, end:
     eq = pd.concat([pd.Series([1.0], index=[start]), equity]).sort_index()
     years = max((end - start).days / 365.25, 1e-9)
     dd = float((eq / eq.cummax() - 1).min())
-    yearly = eq.resample("YE").last()
+    # điểm vốn ghi ở giờ ĐÓNG nến: lùi 1 giây để nến đóng lúc 00:00 ngày 1/1 thuộc năm trước
+    yearly = eq.set_axis(eq.index - pd.Timedelta(seconds=1)).resample("YE").last()
     prev = pd.concat([pd.Series([1.0]), yearly.iloc[:-1].reset_index(drop=True)])
     yr = pd.Series(yearly.to_numpy() / prev.to_numpy() - 1, index=yearly.index.year)
     b = btc_close.loc[start:end]
