@@ -97,10 +97,29 @@ def test_evaluate_end_to_end():
     gidx = pd.bdate_range("2003-01-01", "2026-10-31")
     xau = pd.Series(_walk(len(gidx), 6, 0.0003, 0.01).to_numpy(), index=gidx)
     ev = pd.Series(0.0001, index=pd.date_range("2019-09-10", "2026-10-31", freq="8h", tz="UTC"))
-    data = {"btc": btc, "xau": xau, "btc_funding": ev, "xau_funding": ev.iloc[-300:], "xau_nguon": "giả lập"}
+    data = {"btc": btc, "xau": xau, "btc_funding": ev, "xau_funding_v2": ev.iloc[-300:], "xau_nguon": "giả lập"}
     o = evaluate(data)
     assert len(o["V1_long_short"]["dat"]) == 6
     assert o["giai_doan"][0] > "2018-04" and o["giai_doan"][1] == "2026-10-31"
     assert 0.03 < o["V1_long_short"]["bien_dong"] < 0.12  # quanh mục tiêu 6,5%
     assert "Tổng:" in report(o)
     assert ASSET_VOL == pytest.approx(0.046)
+
+
+def test_bitunix_funding_pages_backwards():
+    from crypto_agent.xuhuong.data import bitunix_funding_events
+
+    full = pd.Series(0.0001, index=pd.date_range("2025-01-01", periods=1000, freq="4h", tz="UTC"))
+
+    class Api:
+        calls = 0
+
+        def funding_history(self, symbol, start_ms, end_ms=None):
+            Api.calls += 1
+            s = full[
+                (full.index.astype("int64") // 10**6 >= start_ms) & (full.index.astype("int64") // 10**6 <= end_ms)
+            ]
+            return s.iloc[-200:]
+
+    got = bitunix_funding_events(api=Api())
+    assert len(got) == 1000 and Api.calls >= 5

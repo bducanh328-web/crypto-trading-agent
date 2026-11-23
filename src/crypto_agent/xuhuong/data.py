@@ -76,22 +76,24 @@ def btc_funding_events() -> pd.Series:
     return pd.concat(parts).sort_index()
 
 
-def bitunix_funding_events(symbol: str = "XAUUSDT") -> pd.Series:
-    from ..data.bitunix import BitunixPublic
+def bitunix_funding_events(symbol: str = "XAUUSDT", api=None) -> pd.Series:
+    """Toàn bộ lịch sử funding có được. API trả 200 kỳ GẦN NHẤT trong khoảng, nên lật trang lùi theo endTime."""
+    if api is None:
+        from ..data.bitunix import BitunixPublic
 
-    api = BitunixPublic()
-    start = int(pd.Timestamp("2023-01-01", tz="UTC").timestamp() * 1000)
-    now = int(time.time() * 1000)
+        api = BitunixPublic()
+    start = int(pd.Timestamp("2020-01-01", tz="UTC").timestamp() * 1000)
+    end = int(time.time() * 1000)
     out: list[pd.Series] = []
-    for _ in range(200):
-        s = api.funding_history(symbol, start)
+    for _ in range(500):
+        s = api.funding_history(symbol, start, end)
         if s.empty:
             break
         out.append(s)
-        nxt = int(s.index.max().timestamp() * 1000) + 1
-        if nxt <= start or nxt >= now:
+        oldest = int(s.index.min().timestamp() * 1000)
+        if oldest >= end or oldest <= start:
             break
-        start = nxt
+        end = oldest - 1
     if not out:
         return pd.Series(dtype=float)
     s = pd.concat(out).sort_index()
@@ -117,7 +119,11 @@ def daily_funding(events: pd.Series, calendar: pd.DatetimeIndex, fill_mean: bool
 def load_all(cache: Path) -> dict:
     cache.mkdir(parents=True, exist_ok=True)
     out = {}
-    for name, fn in (("btc", btc_daily), ("btc_funding", btc_funding_events), ("xau_funding", bitunix_funding_events)):
+    for name, fn in (
+        ("btc", btc_daily),
+        ("btc_funding", btc_funding_events),
+        ("xau_funding_v2", bitunix_funding_events),
+    ):
         p = cache / f"{name}.csv"
         if p.exists():
             s = pd.read_csv(p, index_col=0).iloc[:, 0]

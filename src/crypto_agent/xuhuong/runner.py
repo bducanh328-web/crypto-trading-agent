@@ -28,7 +28,7 @@ def evaluate(data: dict) -> dict:
     xau = data["xau"].loc[:END].astype(float)
     cal = pd.date_range(btc.index.min(), END, freq="D")
     f_btc, btc_mean = daily_funding(data["btc_funding"], cal, fill_mean=True)
-    _, xau_mean = daily_funding(data["xau_funding"], cal, fill_mean=True)
+    _, xau_mean = daily_funding(data["xau_funding_v2"], cal, fill_mean=True)
     f_xau = pd.Series(xau_mean, index=cal)  # đặc tả: mức trung bình thực tế áp cho cả giai đoạn
     prices = {"BTC": btc, "XAU": xau}
     funding = {"BTC": f_btc, "XAU": f_xau}
@@ -40,7 +40,7 @@ def evaluate(data: dict) -> dict:
     period = cal[cal >= start]
     out: dict = {"giai_doan": [str(period[0].date()), str(period[-1].date())], "nguon_vang": data["xau_nguon"],
                  "funding_ngay": {"BTC_tb": btc_mean, "XAU_tb": xau_mean,
-                                  "XAU_so_ky": int(len(data["xau_funding"]))}}  # fmt: skip
+                                  "XAU_so_ky": int(len(data["xau_funding_v2"]))}}  # fmt: skip
     runs = {}
     for name, mode in (
         ("V1_long_short", "long_short"),
