@@ -122,3 +122,15 @@ def test_bitunix_funding_pages_backwards():
 
     got = bitunix_funding_events(api=Api())
     assert len(got) == 1000 and Api.calls >= 5
+
+
+def test_evaluate_spot_end_to_end():
+    from crypto_agent.xuhuong.runner import evaluate_spot, report_spot
+
+    btc = _walk(3300, 5, 0.0015, 0.035, start="2017-08-17")
+    gidx = pd.bdate_range("2003-01-01", "2026-10-31")
+    xau = pd.Series(_walk(len(gidx), 6, 0.0003, 0.01).to_numpy(), index=gidx)
+    o = evaluate_spot({"btc": btc, "xau": xau, "xau_nguon": "giả lập"})
+    s = o["S1_giao_ngay"]
+    assert s["funding"] == 0 and s["ty_trong_max_tong"] <= 1.0 + 1e-9 and len(s["dat"]) == 6
+    assert "Tổng:" in report_spot(o)

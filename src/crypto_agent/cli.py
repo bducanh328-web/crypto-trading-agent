@@ -156,6 +156,7 @@ def main(argv: list[str] | None = None) -> int:
     xh = sub.add_parser("xu-huong", help="Kiểm định BTC + XAU theo xu hướng ngày (đặc tả chốt trước)")
     xh.add_argument("--data-dir", default="data")
     xh.add_argument("--ket-qua", default="ket_qua")
+    xh.add_argument("--dac-ta", type=int, default=1, choices=[1, 2], help="1: hợp đồng vĩnh cửu; 2: giao ngay")
     xh.set_defaults(func=lambda a: __import__("crypto_agent.xuhuong.runner", fromlist=["x"]).main_args(a))
 
     k = sub.add_parser("hop-dong", help="In các trường của danh sách hợp đồng Bitunix (kiểm tra nguồn)")

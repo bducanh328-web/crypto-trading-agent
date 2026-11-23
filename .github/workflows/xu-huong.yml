@@ -2,6 +2,10 @@ name: Kiểm định BTC + XAU xu hướng
 
 on:
   workflow_dispatch:
+    inputs:
+      dac_ta:
+        description: "1: hợp đồng vĩnh cửu; 2: giao ngay"
+        default: "1"
 
 jobs:
   xu-huong:
@@ -20,7 +24,7 @@ jobs:
           key: xuhuong-v1-${{ github.run_id }}
           restore-keys: xuhuong-v1-
       - name: Kiểm định
-        run: cta xu-huong | tee -a "$GITHUB_STEP_SUMMARY"
+        run: cta xu-huong --dac-ta "${{ inputs.dac_ta }}" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Dữ liệu đã dùng
         if: always()
         run: |

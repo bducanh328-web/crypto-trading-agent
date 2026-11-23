@@ -88,6 +88,97 @@ def evaluate(data: dict) -> dict:
     return out
 
 
+SPOT_FEE = 0.0010  # taker giao ngay Bitunix VIP0
+
+
+def _cap_total(targets: dict[str, pd.Series]) -> dict[str, pd.Series]:
+    """Tổng tỷ trọng các tài sản ≤ 1 (đặc tả 2): nếu vượt thì thu nhỏ cùng tỷ lệ."""
+    frame = pd.DataFrame(targets).ffill().fillna(0.0)
+    scale = (1.0 / frame.abs().sum(axis=1)).clip(upper=1.0)
+    return {a: (s * scale.reindex(s.index)).where(s.notna()) for a, s in targets.items()}
+
+
+def evaluate_spot(data: dict) -> dict:
+    """Đặc tả 2: giao ngay, chỉ long hoặc đứng ngoài, không funding, không đòn bẩy."""
+    btc = data["btc"].loc[:END].astype(float)
+    xau = data["xau"].loc[:END].astype(float)
+    cal = pd.date_range(btc.index.min(), END, freq="D")
+    prices = {"BTC": btc, "XAU": xau}
+    zero_cal = {a: pd.Series(0.0, index=cal) for a in prices}
+    out: dict = {"nguon_vang": data["xau_nguon"]}
+    tg = {}
+    for name, mode in (("S1_giao_ngay", "long_flat"), ("M4g_luon_long", "always_long")):
+        raw = {a: target_weights(prices[a], ANN[a], mode, max_w=1.0) for a in prices}
+        tg[name] = _cap_total(raw)
+    start = max(tg["S1_giao_ngay"][a].first_valid_index() for a in prices) + pd.Timedelta(days=1)
+    period = cal[cal >= start]
+    out["giai_doan"] = [str(period[0].date()), str(period[-1].date())]
+    for name in ("S1_giao_ngay", "M4g_luon_long"):
+        res = simulate(prices, {a: tg[name][a].loc[start:] for a in prices}, zero_cal, period, fee=SPOT_FEE)
+        s = stats(res.equity)
+        s["so_giao_dich"], s["chi_phi"], s["funding"] = res.trades, res.costs, res.funding
+        s["dong_gop"] = {a: float(res.contrib[a].iloc[-1]) for a in prices}
+        s["ty_trong_tb"] = {a: float(res.weights[a].abs().mean()) for a in prices}
+        s["ty_trong_max_tong"] = float(res.weights.abs().sum(axis=1).max())
+        s["sharpe_truoc"] = _sharpe(res.equity.loc[:SPLIT])
+        s["sharpe_sau"] = _sharpe(res.equity.loc[SPLIT:])
+        out[name] = s
+    hold = {a: (prices[a].reindex(period).ffill() / prices[a].reindex(period).ffill().dropna().iloc[0]) for a in prices}
+    out["M1_giu_BTC"] = stats(hold["BTC"].dropna())
+    out["M2_giu_vang"] = stats(hold["XAU"].dropna())
+    const = {a: pd.Series(0.5, index=prices[a].loc[start:].index) for a in prices}
+    out["M3_giu_50_50"] = stats(simulate(prices, const, zero_cal, period, monthly=True, fee=SPOT_FEE).equity)
+    gcal = pd.date_range(GOLD_LONG_START, END, freq="D")
+    gt = target_weights(xau, ANN["XAU"], "long_flat", max_w=1.0)
+    gstart = max(gt.first_valid_index() + pd.Timedelta(days=1), GOLD_LONG_START)
+    g = simulate({"XAU": xau}, {"XAU": gt.loc[gstart:]}, {"XAU": pd.Series(0.0, index=gcal)}, gcal[gcal >= gstart],
+                 fee=SPOT_FEE)  # fmt: skip
+    out["vang_rieng_2005"] = stats(g.equity)
+    s, m4 = out["S1_giao_ngay"], out["M4g_luon_long"]
+    s["dat"] = {
+        "1_sut_giam_<=15%": bool(-s["sut_giam"] <= 0.15),
+        "2_sharpe_>=0.6": bool(s["sharpe"] >= 0.6),
+        "3_calmar_>=M4g": bool(s["calmar"] >= m4["calmar"]),
+        "4_nam_lai_>=2/3": bool(s["nam_tron_lai"] >= 2 / 3),
+        "5_sharpe_truoc_sau_>0": bool(s["sharpe_truoc"] > 0 and s["sharpe_sau"] > 0),
+        "6_vang_2005_sharpe_>0": bool(out["vang_rieng_2005"]["sharpe"] > 0),
+    }
+    s["DAT_TAT_CA"] = all(s["dat"].values())
+    return out
+
+
+def report_spot(o: dict) -> str:
+    def pct(x):
+        return "–" if x is None or not np.isfinite(x) else f"{100 * x:+.1f}%"
+
+    def num(x):
+        return "–" if x is None or not np.isfinite(x) else f"{x:.2f}"
+
+    lines = ["# Kết quả đặc tả 2: BTC + vàng giao ngay, chỉ long hoặc đứng ngoài", "",
+             f"Giai đoạn: {o['giai_doan'][0]} → {o['giai_doan'][1]}. Nguồn vàng: {o['nguon_vang']}.", "",
+             "| Chiến lược | CAGR | Biến động | Sharpe | Sụt giảm | Calmar | Năm lãi | Chạm −15% |",
+             "|---|---|---|---|---|---|---|---|"]  # fmt: skip
+    for k in ("S1_giao_ngay", "M4g_luon_long", "M3_giu_50_50", "M1_giu_BTC", "M2_giu_vang", "vang_rieng_2005"):
+        s = o[k]
+        lines.append(
+            f"| {k} | {pct(s['cagr'])} | {pct(s['bien_dong'])} | {num(s['sharpe'])} | {pct(s['sut_giam'])} "
+            f"| {num(s['calmar'])} | {pct(s['nam_tron_lai'])} ({s['so_nam_tron']} năm) | {s['cham_15'] or 'không'} |"
+        )
+    for k in ("S1_giao_ngay", "M4g_luon_long"):
+        s = o[k]
+        lines += ["", f"## {k}", f"Theo năm: { {y: round(v, 4) for y, v in s['theo_nam'].items()} }",
+                  f"Đóng góp: {s['dong_gop']} · Tỷ trọng TB: {s['ty_trong_tb']} · Tổng tỷ trọng max: "
+                  f"{s['ty_trong_max_tong']:.2f}",
+                  f"Giao dịch: {s['so_giao_dich']} · Chi phí: {s['chi_phi']:.4f}",
+                  f"Sharpe trước/sau 07/2022: {num(s['sharpe_truoc'])} / {num(s['sharpe_sau'])}"]  # fmt: skip
+        if "dat" in s:
+            lines += [f"- {c}: {'ĐẠT' if ok else 'KHÔNG ĐẠT'}" for c, ok in s["dat"].items()]
+            lines.append(f"**Tổng: {'ĐẠT' if s['DAT_TAT_CA'] else 'KHÔNG ĐẠT'}**")
+    gy = {y: round(v, 4) for y, v in o["vang_rieng_2005"]["theo_nam"].items()}
+    lines += ["", f"Vàng riêng 2005: theo năm {gy}"]
+    return "\n".join(lines) + "\n"
+
+
 def report(o: dict) -> str:
     def pct(x):
         return "–" if x is None or not np.isfinite(x) else f"{100 * x:+.1f}%"
@@ -128,6 +219,14 @@ def report(o: dict) -> str:
 
 def main_args(args) -> int:
     data = load_all(Path(args.data_dir) / "xuhuong")
+    if getattr(args, "dac_ta", 1) == 2:
+        o = evaluate_spot(data)
+        out = Path(args.ket_qua)
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "giao_ngay.json").write_text(json.dumps(o, ensure_ascii=False, indent=1, default=str), "utf-8")
+        md = report_spot(o)
+        print(md)
+        return 0
     o = evaluate(data)
     out = Path(args.ket_qua)
     out.mkdir(parents=True, exist_ok=True)

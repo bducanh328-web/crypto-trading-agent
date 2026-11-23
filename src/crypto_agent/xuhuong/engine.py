@@ -32,7 +32,7 @@ def realized_vol(close: pd.Series, ann_days: int, n: int = VOL_DAYS) -> pd.Serie
     return np.log(close).diff().rolling(n).std() * np.sqrt(ann_days)
 
 
-def target_weights(close: pd.Series, ann_days: int, mode: str) -> pd.Series:
+def target_weights(close: pd.Series, ann_days: int, mode: str, max_w: float = MAX_W) -> pd.Series:
     """mode: long_short (V1) | long_flat (V2) | always_long (M4)."""
     s = signal(close)
     if mode == "long_flat":
@@ -40,7 +40,7 @@ def target_weights(close: pd.Series, ann_days: int, mode: str) -> pd.Series:
     elif mode == "always_long":
         s = s.where(s.isna(), 1.0)
     w = s * ASSET_VOL / realized_vol(close, ann_days)
-    return w.clip(-MAX_W, MAX_W)
+    return w.clip(-max_w, max_w)
 
 
 @dataclass
@@ -54,7 +54,8 @@ class SimResult:
 
 
 def simulate(prices: dict[str, pd.Series], targets: dict[str, pd.Series], funding_daily: dict[str, pd.Series],
-             calendar: pd.DatetimeIndex, band: float = BAND, monthly: bool = False) -> SimResult:  # fmt: skip
+             calendar: pd.DatetimeIndex, band: float = BAND, monthly: bool = False, fee: float = FEE,
+             slip: float = SLIP) -> SimResult:  # fmt: skip
     """prices/targets theo ngày giao dịch của từng tài sản; funding_daily theo ngày lịch (tỷ lệ mỗi ngày)."""
     eq = 1.0
     notional = dict.fromkeys(prices, 0.0)
@@ -98,7 +99,7 @@ def simulate(prices: dict[str, pd.Series], targets: dict[str, pd.Series], fundin
                     go = (np.sign(tgt) != np.sign(cw)) or abs(tgt - cw) > band * abs(cw)
                 if go and abs(tgt - cw) > 1e-12:
                     trade = abs(tgt * eq - notional[a])
-                    c = trade * (FEE + SLIP)
+                    c = trade * (fee + slip)
                     eq -= c
                     contrib[a] -= c
                     costs += c
