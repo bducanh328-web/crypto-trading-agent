@@ -6,7 +6,20 @@ hệ thống cổ phiếu (vn-trading-agent). Vốn 100 triệu đồng, sụt g
 **Mọi thông số là giá trị khởi điểm, CHƯA KIỂM ĐỊNH.** Không dùng để vào lệnh thật trước khi qua cổng kiểm định
 (giai đoạn 2–3) và 3 tháng chạy giấy (giai đoạn 4).
 
-## Giai đoạn 1 (hiện tại): dữ liệu + đèn chung
+## Hệ thống đang chạy giấy: B1 (BTC giao ngay theo xu hướng)
+
+Đặc tả 3, chốt trước 23/11/2026, đạt 6/6 tiêu chí kiểm định 2018–10/2026 (phép thử không độc lập, nên phải chạy giấy
+3 tháng). Mỗi ngày 07:10 giờ Việt Nam, workflow "B1 chạy giấy" (`cta b1-giay`):
+
+1. Thực hiện trên giấy tỷ trọng mục tiêu đã quyết hôm trước, ở giá đóng cửa nến vừa đóng, nếu lệch quá 20%.
+2. Tín hiệu: trung bình 4 phiếu momentum 20/60/120/250 ngày; âm thì về 0 (đứng ngoài).
+3. Tỷ trọng mục tiêu = tín hiệu × 15% ÷ biến động 60 ngày (năm), tối đa 100% vốn; thực hiện sáng hôm sau.
+4. Ghi sổ `so_giay/b1.csv` (vốn khởi điểm 1,0 = 100 triệu đồng, phí 0,10% + trượt 0,05%) và gửi Telegram.
+
+Biến kho `USDT_VND` (mặc định 26000) để quy đổi lệnh sang USDT. Hệ thống "Lớp bối cảnh + BOS hai chiều" bên dưới đã
+trượt kiểm định và không dùng.
+
+## Giai đoạn 1 (đã dừng): dữ liệu + đèn chung
 
 `cta den` chạy mỗi ngày lúc 07:05 giờ Việt Nam (sau khi nến 1D đóng), gửi Telegram:
 

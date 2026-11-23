@@ -2,6 +2,8 @@ name: Kiểm thử
 
 on:
   push:
+    paths-ignore:
+      - "so_giay/**"
   pull_request:
 
 jobs:

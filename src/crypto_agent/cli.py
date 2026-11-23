@@ -165,6 +165,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     xh.set_defaults(func=lambda a: __import__("crypto_agent.xuhuong.runner", fromlist=["x"]).main_args(a))
 
+    gy = sub.add_parser("b1-giay", help="Chạy giấy B1: BTC giao ngay theo xu hướng (mỗi sáng)")
+    gy.add_argument("--so", default="so_giay/b1.csv")
+    gy.add_argument("--usdt-vnd", type=float, default=26_000, help="Tỷ giá quy đổi (hoặc biến môi trường USDT_VND)")
+    gy.add_argument("--telegram", action="store_true")
+    gy.add_argument("--summary", default="")
+    gy.set_defaults(func=lambda a: __import__("crypto_agent.xuhuong.giay", fromlist=["x"]).main_args(a))
+
     k = sub.add_parser("hop-dong", help="In các trường của danh sách hợp đồng Bitunix (kiểm tra nguồn)")
     k.add_argument("ma", nargs="*")
     k.set_defaults(func=cmd_hop_dong)
