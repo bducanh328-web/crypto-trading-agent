@@ -1,0 +1,28 @@
+name: Kiểm định BTC + XAU xu hướng
+
+on:
+  workflow_dispatch:
+
+jobs:
+  xu-huong:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Bộ đệm dữ liệu
+        uses: actions/cache@v4
+        with:
+          path: data/xuhuong
+          key: xuhuong-v1-${{ github.run_id }}
+          restore-keys: xuhuong-v1-
+      - name: Kiểm định
+        run: cta xu-huong | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Dữ liệu đã dùng
+        if: always()
+        run: |
+          for f in data/xuhuong/*.csv; do echo "== $f: $(wc -l < "$f") dòng"; head -3 "$f"; tail -2 "$f"; done
+          cat data/xuhuong/xau_nguon.txt 2>/dev/null || true
