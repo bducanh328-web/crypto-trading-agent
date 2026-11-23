@@ -119,7 +119,7 @@ def cmd_hop_dong(args: argparse.Namespace) -> int:
     if "maxFundingRate" in pairs:
         for val, grp in pairs.groupby(pairs["maxFundingRate"].astype(str)):
             names = sorted(grp["base"].astype(str))
-            print(f"maxFundingRate={val} ({len(names)}): {' '.join(names[:400])}")
+            print(f"maxFundingRate={val} ({len(names)}): {' '.join(names)}")
     rows = pairs[pairs["symbol"].isin(args.ma)] if args.ma else pairs.head(5)
     print(rows.T.to_string())
     return 0
