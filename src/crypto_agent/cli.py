@@ -107,6 +107,20 @@ def cmd_lich_su(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_hop_dong(args: argparse.Namespace) -> int:
+    """In toàn bộ trường của danh sách hợp đồng Bitunix cho các mã chỉ định (kiểm tra nguồn)."""
+    pairs = BitunixPublic().trading_pairs()
+    print("Cột:", ", ".join(map(str, pairs.columns)))
+    print("Số hợp đồng:", len(pairs))
+    for col in pairs.columns:
+        vals = pairs[col].astype(str).value_counts()
+        if 1 < len(vals) <= 12:
+            print(f"{col}: {dict(vals)}")
+    rows = pairs[pairs["symbol"].isin(args.ma)] if args.ma else pairs.head(5)
+    print(rows.T.to_string())
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     ap = argparse.ArgumentParser(prog="cta", description="Hệ thống crypto: Lớp bối cảnh + BOS hai chiều")
@@ -126,6 +140,10 @@ def main(argv: list[str] | None = None) -> int:
     h.add_argument("--funding", action="store_true")
     h.add_argument("--data-dir", default="data")
     h.set_defaults(func=cmd_lich_su)
+
+    k = sub.add_parser("hop-dong", help="In các trường của danh sách hợp đồng Bitunix (kiểm tra nguồn)")
+    k.add_argument("ma", nargs="*")
+    k.set_defaults(func=cmd_hop_dong)
 
     args = ap.parse_args(argv)
     return args.func(args)

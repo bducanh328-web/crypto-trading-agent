@@ -1,0 +1,19 @@
+name: Kiểm tra nguồn Bitunix
+
+on:
+  workflow_dispatch:
+    inputs:
+      ma:
+        description: "Mã cần xem, cách nhau bằng dấu cách"
+        default: "BTCUSDT MSTRUSDT QQQUSDT"
+
+jobs:
+  hop-dong:
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: cta hop-dong ${{ inputs.ma }}
