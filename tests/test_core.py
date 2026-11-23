@@ -5,7 +5,6 @@ from datetime import date, datetime, timezone
 import numpy as np
 import pandas as pd
 import pytest
-from conftest import make_daily
 
 from crypto_agent.context import GREEN, RED, YELLOW, breadth, build_context, confirm, funding_per_8h
 from crypto_agent.data.binance_vision import BinanceVision, parse_klines
@@ -14,6 +13,8 @@ from crypto_agent.data.cache import KlineCache
 from crypto_agent.report import daily_status
 from crypto_agent.structure import DOWN, UP, structure
 from crypto_agent.universe import eligible_pairs, rank_by_turnover
+
+from conftest import make_daily
 
 
 # --- Cấu trúc swing / BOS ----------------------------------------------------------------------------------------

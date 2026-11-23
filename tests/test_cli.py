@@ -1,8 +1,9 @@
 import pandas as pd
-from conftest import make_daily
 
 from crypto_agent import cli
 from crypto_agent.context import GREEN
+
+from conftest import make_daily
 
 
 class FakeBitunix:

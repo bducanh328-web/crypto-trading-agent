@@ -33,3 +33,7 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["crypto_agent"]
+known-local-folder = ["conftest"]
