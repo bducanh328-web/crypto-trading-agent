@@ -1,0 +1,41 @@
+name: Kiểm định lịch sử
+
+on:
+  workflow_dispatch:
+    inputs:
+      buoc:
+        description: "tai | chay | tat_ca"
+        default: "tat_ca"
+      chi:
+        description: "Chỉ chạy các biến thể (cách nhau bằng dấu cách), để trống = tất cả"
+        default: ""
+
+jobs:
+  kiem-dinh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Bộ đệm lịch sử
+        uses: actions/cache@v4
+        with:
+          path: data/hist
+          key: hist-v1-${{ github.run_id }}
+          restore-keys: hist-v1-
+      - name: Kiểm định
+        run: cta kiem-dinh --buoc "${{ inputs.buoc }}" --luong 24 ${{ inputs.chi && format('--chi {0}', inputs.chi) || '' }}
+      - name: Tóm tắt
+        if: always()
+        run: |
+          if [ -f ket_qua/tong_hop.md ]; then cat ket_qua/tong_hop.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f data/hist/ro_thang.csv ]; then cp data/hist/ro_thang.csv ket_qua/ 2>/dev/null || true; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ket-qua-kiem-dinh
+          path: ket_qua/
+          if-no-files-found: warn

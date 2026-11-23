@@ -145,6 +145,14 @@ def main(argv: list[str] | None = None) -> int:
     h.add_argument("--data-dir", default="data")
     h.set_defaults(func=cmd_lich_su)
 
+    kd = sub.add_parser("kiem-dinh", help="Kiểm định lịch sử 2020–10/2026 (cơ sở + biến thể + độ nhạy)")
+    kd.add_argument("--buoc", choices=["tai", "chay", "tat_ca"], default="tat_ca")
+    kd.add_argument("--data-dir", default="data")
+    kd.add_argument("--ket-qua", default="ket_qua")
+    kd.add_argument("--luong", type=int, default=16, help="Số luồng tải song song")
+    kd.add_argument("--chi", nargs="*", default=[], help="Chỉ chạy các biến thể này (vd. co_so)")
+    kd.set_defaults(func=lambda a: __import__("crypto_agent.backtest.runner", fromlist=["x"]).main_args(a))
+
     k = sub.add_parser("hop-dong", help="In các trường của danh sách hợp đồng Bitunix (kiểm tra nguồn)")
     k.add_argument("ma", nargs="*")
     k.set_defaults(func=cmd_hop_dong)
