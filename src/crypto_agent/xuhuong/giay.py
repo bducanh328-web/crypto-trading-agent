@@ -120,6 +120,8 @@ def message(ledger: pd.DataFrame, usdt_vnd: float) -> str:
         lines.append(f"🔔 <b>Lệnh hôm nay: {r['lenh'].upper()} {qty:.5f} BTC</b> (~{_price(usdt)} USDT, "
                      f"{_vnd(abs(r['giao_dich_von']))}) quanh giá {_price(r['gia'])}".replace("0.", "0,"))  # fmt: skip
         lines.append(f"   Tỷ trọng BTC {_pct(r['ty_trong_truoc'])} → {_pct(r['ty_trong_sau'])} vốn")
+    elif r["lenh"] == "giữ" and r["ty_trong_sau"] < 1e-9:
+        lines.append("Không có lệnh: tiếp tục đứng ngoài, không nắm BTC")
     elif r["lenh"] == "giữ":
         lines.append(f"Không có lệnh: giữ BTC {_pct(r['ty_trong_sau'])} vốn (lệch chưa quá 20%)")
     else:
