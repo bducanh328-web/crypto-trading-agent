@@ -143,7 +143,9 @@ def main_args(args) -> int:
     closes = df["close"].copy()
     closes.index = closes.index.tz_convert(None).normalize()
     path = Path(args.so)
-    ledger = step(load_ledger(path), closes)
+    old = load_ledger(path)
+    ledger = step(old, closes)
+    is_new = len(ledger) > len(old)
     path.parent.mkdir(parents=True, exist_ok=True)
     ledger.to_csv(path, index=False)
     rate = float(os.environ.get("USDT_VND", args.usdt_vnd))
@@ -151,6 +153,9 @@ def main_args(args) -> int:
     print(text)
     if args.summary:
         Path(args.summary).write_text(text + "\n", encoding="utf-8")
+    if args.telegram and args.chi_khi_moi and not is_new:
+        log.info("Không có nến ngày mới (đã gửi bản tin hôm nay): bỏ qua Telegram")
+        return 0
     if args.telegram:
         from ..telegram import CHAT_ENV, TOKEN_ENV, send
 

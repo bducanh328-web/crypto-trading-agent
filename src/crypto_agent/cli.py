@@ -169,6 +169,7 @@ def main(argv: list[str] | None = None) -> int:
     gy.add_argument("--so", default="so_giay/b1.csv")
     gy.add_argument("--usdt-vnd", type=float, default=26_000, help="Tỷ giá quy đổi (hoặc biến môi trường USDT_VND)")
     gy.add_argument("--telegram", action="store_true")
+    gy.add_argument("--chi-khi-moi", action="store_true", help="Chỉ gửi Telegram khi có nến ngày mới (lịch dự phòng)")
     gy.add_argument("--summary", default="")
     gy.set_defaults(func=lambda a: __import__("crypto_agent.xuhuong.giay", fromlist=["x"]).main_args(a))
 

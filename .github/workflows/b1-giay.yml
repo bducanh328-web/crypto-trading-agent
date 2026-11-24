@@ -2,7 +2,10 @@ name: B1 chạy giấy (BTC giao ngay)
 
 on:
   schedule:
-    - cron: "10 0 * * *"  # 07:10 giờ Việt Nam, sau khi nến ngày đóng
+    # Lịch của GitHub có thể trễ hoặc bỏ lượt: chạy 3 lần, chỉ lần đầu có nến mới mới gửi Telegram
+    - cron: "10 0 * * *"   # 07:10 giờ Việt Nam
+    - cron: "43 1 * * *"   # 08:43
+    - cron: "17 3 * * *"   # 10:17
   workflow_dispatch:
 
 permissions:
@@ -27,7 +30,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           USDT_VND: ${{ vars.USDT_VND || 26000 }}
-        run: cta b1-giay --telegram --summary "$GITHUB_STEP_SUMMARY"
+        run: cta b1-giay --telegram --summary "$GITHUB_STEP_SUMMARY" ${{ github.event_name == 'schedule' && '--chi-khi-moi' || '' }}
       - name: Lưu sổ giấy
         run: |
           git config user.name "b1-bot"
